@@ -1,0 +1,18 @@
+[Unit]
+Description=Raspberry Pi Network Cable Tester
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/rpi-network-cable-tester
+ExecStart=/usr/bin/python3 /home/pi/rpi-network-cable-tester/network_cable_tester.py
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=network-cable-tester
+
+[Install]
+WantedBy=multi-user.target
