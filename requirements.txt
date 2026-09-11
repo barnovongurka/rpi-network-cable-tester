@@ -1,0 +1,3 @@
+# Raspberry Pi Network Cable Tester - Requirements
+
+RPi.GPIO>=0.7.0
