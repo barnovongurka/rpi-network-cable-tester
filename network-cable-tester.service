@@ -5,7 +5,7 @@ Wants=network.target
 
 [Service]
 Type=simple
-User=pi
+User=root
 WorkingDirectory=/home/pi/rpi-network-cable-tester
 ExecStart=/usr/bin/python3 /home/pi/rpi-network-cable-tester/network_cable_tester.py
 Restart=always
