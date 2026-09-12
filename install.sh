@@ -40,40 +40,45 @@ echo "Installing Python requirements..."
 apt-get update
 apt-get install -y python3-rpi.gpio
 
-# Configure static IP addresses
+# Install NetworkManager and nmcli
 echo ""
-echo "Configuring static IP addresses..."
-echo "Adding dhcpcd configuration for static IPs..."
+echo "Installing NetworkManager..."
+apt-get install -y network-manager
 
-# Backup the original dhcpcd.conf if not already backed up
-if [ ! -f /etc/dhcpcd.conf.bak ]; then
-    cp /etc/dhcpcd.conf /etc/dhcpcd.conf.bak
-    echo "Original dhcpcd.conf backed up to /etc/dhcpcd.conf.bak"
-fi
+# Enable NetworkManager
+echo "Enabling NetworkManager..."
+systemctl enable NetworkManager
+systemctl start NetworkManager
 
-# Remove any existing network cable tester configuration
-sed -i '/# Network Cable Tester Configuration/,/^$/d' /etc/dhcpcd.conf
+# Wait for NetworkManager to be ready
+echo "Waiting for NetworkManager to initialize..."
+sleep 3
 
-# Add static IP configuration
-cat >> /etc/dhcpcd.conf <<'EOF'
+# Configure static IP addresses using nmcli
+echo ""
+echo "Configuring static IP addresses using nmcli..."
 
-# Network Cable Tester Configuration
-# Primary interface (built-in ethernet)
-interface eth0
-static ip_address=192.168.1.100/24
-static routers=192.168.1.1
-static domain_name_servers=8.8.8.8 8.8.4.4
+# Configure eth0 (primary interface)
+echo "Configuring eth0 (192.168.1.100)..."
+nmcli connection delete "Wired connection 1" 2>/dev/null || true
+nmcli connection add type ethernet ifname eth0 con-name "eth0-static"
+nmcli connection modify "eth0-static" ipv4.addresses 192.168.1.100/24
+nmcli connection modify "eth0-static" ipv4.gateway 192.168.1.1
+nmcli connection modify "eth0-static" ipv4.dns "8.8.8.8 8.8.4.4"
+nmcli connection modify "eth0-static" ipv4.method manual
+nmcli connection up "eth0-static"
 
-# Secondary interface (USB adapter)
-interface eth1
-static ip_address=192.168.1.101/24
-static routers=192.168.1.1
-static domain_name_servers=8.8.8.8 8.8.4.4
-EOF
+# Configure eth1 (USB adapter interface)
+echo "Configuring eth1 (192.168.1.101)..."
+nmcli connection delete "Wired connection 2" 2>/dev/null || true
+nmcli connection add type ethernet ifname eth1 con-name "eth1-static"
+nmcli connection modify "eth1-static" ipv4.addresses 192.168.1.101/24
+nmcli connection modify "eth1-static" ipv4.gateway 192.168.1.1
+nmcli connection modify "eth1-static" ipv4.dns "8.8.8.8 8.8.4.4"
+nmcli connection modify "eth1-static" ipv4.method manual
+nmcli connection up "eth1-static"
 
-echo "Static IP configuration added:"
-echo "  eth0: 192.168.1.100/24"
-echo "  eth1: 192.168.1.101/24"
+echo "Network interfaces configured successfully!"
 
 # Enable the service
 echo ""
@@ -91,32 +96,37 @@ echo "  eth0 (Primary): 192.168.1.100/24"
 echo "  eth1 (USB Adapter): 192.168.1.101/24"
 echo ""
 echo "⚠️  IMPORTANT: Review and adjust IP addresses if needed!"
-echo "   Edit: /etc/dhcpcd.conf (search for 'Network Cable Tester')"
-echo "   Or restore backup: sudo cp /etc/dhcpcd.conf.bak /etc/dhcpcd.conf"
+echo "   View connection: nmcli connection show"
+echo "   View devices: nmcli device show"
+echo ""
+echo "   Edit eth0 connection:"
+echo "   nmcli connection modify eth0-static ipv4.addresses <NEW_IP>/24"
+echo "   nmcli connection up eth0-static"
+echo ""
+echo "   Edit eth1 connection:"
+echo "   nmcli connection modify eth1-static ipv4.addresses <NEW_IP>/24"
+echo "   nmcli connection up eth1-static"
 echo ""
 echo "Next steps:"
-echo "1. (Optional) Edit IP addresses in /etc/dhcpcd.conf"
+echo "1. (Optional) Edit IP addresses using nmcli if needed"
 echo ""
 echo "2. (Optional) Edit GPIO pin numbers if needed:"
 echo "   - GREEN_LED_PIN in $INSTALL_DIR/$SCRIPT_FILE"
 echo "   - RED_LED_PIN in $INSTALL_DIR/$SCRIPT_FILE"
 echo ""
-echo "3. Reboot to apply network configuration:"
-echo "   sudo reboot"
-echo ""
-echo "4. After reboot, verify network configuration:"
+echo "3. Verify network configuration:"
 echo "   ip addr show"
 echo ""
-echo "5. Start the service:"
+echo "4. Start the service:"
 echo "   sudo systemctl start network-cable-tester.service"
 echo ""
-echo "6. View live logs:"
+echo "5. View live logs:"
 echo "   sudo journalctl -u network-cable-tester.service -f"
 echo ""
-echo "7. Stop the service:"
+echo "6. Stop the service:"
 echo "   sudo systemctl stop network-cable-tester.service"
 echo ""
-echo "8. Disable auto-start:"
+echo "7. Disable auto-start:"
 echo "   sudo systemctl disable network-cable-tester.service"
 echo ""
 echo "============================================"
