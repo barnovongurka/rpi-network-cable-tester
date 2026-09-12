@@ -35,11 +35,48 @@ echo "Installing systemd service..."
 cp network-cable-tester.service "$SERVICE_FILE"
 chmod 644 "$SERVICE_FILE"
 
-# Install requirements
+# Install Python requirements
 echo "Installing Python requirements..."
-pip3 install RPi.GPIO
+apt-get update
+apt-get install -y python3-rpi.gpio
+
+# Configure static IP addresses
+echo ""
+echo "Configuring static IP addresses..."
+echo "Adding dhcpcd configuration for static IPs..."
+
+# Backup the original dhcpcd.conf if not already backed up
+if [ ! -f /etc/dhcpcd.conf.bak ]; then
+    cp /etc/dhcpcd.conf /etc/dhcpcd.conf.bak
+    echo "Original dhcpcd.conf backed up to /etc/dhcpcd.conf.bak"
+fi
+
+# Remove any existing network cable tester configuration
+sed -i '/# Network Cable Tester Configuration/,/^$/d' /etc/dhcpcd.conf
+
+# Add static IP configuration
+cat >> /etc/dhcpcd.conf <<'EOF'
+
+# Network Cable Tester Configuration
+# Primary interface (built-in ethernet)
+interface eth0
+static ip_address=192.168.1.100/24
+static routers=192.168.1.1
+static domain_name_servers=8.8.8.8 8.8.4.4
+
+# Secondary interface (USB adapter)
+interface eth1
+static ip_address=192.168.1.101/24
+static routers=192.168.1.1
+static domain_name_servers=8.8.8.8 8.8.4.4
+EOF
+
+echo "Static IP configuration added:"
+echo "  eth0: 192.168.1.100/24"
+echo "  eth1: 192.168.1.101/24"
 
 # Enable the service
+echo ""
 echo "Enabling service for boot startup..."
 systemctl daemon-reload
 systemctl enable network-cable-tester.service
@@ -49,23 +86,37 @@ echo "============================================"
 echo "Installation Complete!"
 echo "============================================"
 echo ""
+echo "Network Configuration:"
+echo "  eth0 (Primary): 192.168.1.100/24"
+echo "  eth1 (USB Adapter): 192.168.1.101/24"
+echo ""
+echo "⚠️  IMPORTANT: Review and adjust IP addresses if needed!"
+echo "   Edit: /etc/dhcpcd.conf (search for 'Network Cable Tester')"
+echo "   Or restore backup: sudo cp /etc/dhcpcd.conf.bak /etc/dhcpcd.conf"
+echo ""
 echo "Next steps:"
-echo "1. Edit GPIO pin numbers if needed:"
+echo "1. (Optional) Edit IP addresses in /etc/dhcpcd.conf"
+echo ""
+echo "2. (Optional) Edit GPIO pin numbers if needed:"
 echo "   - GREEN_LED_PIN in $INSTALL_DIR/$SCRIPT_FILE"
 echo "   - RED_LED_PIN in $INSTALL_DIR/$SCRIPT_FILE"
 echo ""
-echo "2. Ensure your network interfaces are configured with IP addresses"
+echo "3. Reboot to apply network configuration:"
+echo "   sudo reboot"
 echo ""
-echo "3. Start the service:"
+echo "4. After reboot, verify network configuration:"
+echo "   ip addr show"
+echo ""
+echo "5. Start the service:"
 echo "   sudo systemctl start network-cable-tester.service"
 echo ""
-echo "4. View logs:"
+echo "6. View live logs:"
 echo "   sudo journalctl -u network-cable-tester.service -f"
 echo ""
-echo "5. Stop the service:"
+echo "7. Stop the service:"
 echo "   sudo systemctl stop network-cable-tester.service"
 echo ""
-echo "6. Disable auto-start:"
+echo "8. Disable auto-start:"
 echo "   sudo systemctl disable network-cable-tester.service"
 echo ""
 echo "============================================"
